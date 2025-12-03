@@ -6,11 +6,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
-    body {
+    * {
+      box-sizing: border-box;
       margin: 0;
+      padding: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-      background: #0f172a;
-      color: #e5e7eb;
+    }
+
+    body {
+      background: #f3f4f6;
+      color: #111827;
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -21,21 +26,22 @@
     .app {
       width: 100%;
       max-width: 900px;
-      background: #020617;
+      background: #ffffff;
       border-radius: 18px;
-      border: 1px solid #1f2937;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-      padding: 18px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+      padding: 18px 18px 20px;
     }
 
     h1 {
       font-size: 20px;
       margin-bottom: 4px;
+      color: #0f172a;
     }
 
     .subtitle {
       font-size: 12px;
-      color: #9ca3af;
+      color: #6b7280;
       margin-bottom: 12px;
     }
 
@@ -43,41 +49,54 @@
       margin-top: 10px;
       padding: 14px;
       border-radius: 14px;
-      background: #020617;
-      border: 1px solid #1f2937;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+
+    .login-title {
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: #111827;
     }
 
     .input {
       width: 100%;
       padding: 8px 10px;
       border-radius: 10px;
-      border: 1px solid #374151;
-      background: #020617;
-      color: #e5e7eb;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: #111827;
       font-size: 13px;
       margin-bottom: 8px;
       outline: none;
     }
 
     .input:focus {
-      border-color: #3b82f6;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.35);
     }
 
     .btn {
       border: none;
       border-radius: 999px;
-      padding: 8px 14px;
+      padding: 8px 16px;
       font-size: 13px;
       font-weight: 500;
       cursor: pointer;
       background: linear-gradient(135deg, #60a5fa, #2563eb);
       color: white;
-      box-shadow: 0 8px 18px rgba(37,99,235,0.5);
+      box-shadow: 0 8px 18px rgba(37,99,235,0.35);
+    }
+
+    .btn:disabled {
+      opacity: 0.7;
+      cursor: default;
+      box-shadow: none;
     }
 
     .error {
       font-size: 12px;
-      color: #f87171;
+      color: #dc2626;
       margin-top: 4px;
     }
 
@@ -86,22 +105,23 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
+      margin-top: 6px;
     }
 
     .pill {
       font-size: 11px;
-      color: #9ca3af;
-      background: #020617;
+      color: #4b5563;
+      background: #f3f4ff;
       border-radius: 999px;
       padding: 4px 10px;
-      border: 1px solid #1f2937;
+      border: 1px solid #e5e7eb;
     }
 
     .logout-btn {
       background: transparent;
       border-radius: 999px;
-      border: 1px solid #4b5563;
-      color: #e5e7eb;
+      border: 1px solid #d1d5db;
+      color: #374151;
       font-size: 11px;
       padding: 4px 10px;
       cursor: pointer;
@@ -110,15 +130,15 @@
     .list {
       margin-top: 10px;
       border-radius: 12px;
-      border: 1px solid #1f2937;
-      background: #020617;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
       max-height: 60vh;
       overflow-y: auto;
     }
 
     .item {
       padding: 10px 12px;
-      border-bottom: 1px solid #111827;
+      border-bottom: 1px solid #f1f5f9;
     }
 
     .item:last-child {
@@ -127,21 +147,28 @@
 
     .item-message {
       font-size: 14px;
-      color: #e5e7eb;
+      color: #111827;
       margin-bottom: 4px;
       white-space: pre-wrap;
     }
 
     .item-meta {
       font-size: 11px;
-      color: #9ca3af;
+      color: #6b7280;
       display: flex;
       justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     @media (max-width: 600px) {
       .app { padding: 14px; }
       h1 { font-size: 18px; }
+      .top-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
     }
   </style>
 </head>
@@ -152,7 +179,7 @@
 
     <!-- Not logged in -->
     <div id="loginSection" class="login-box">
-      <div style="font-size:13px; margin-bottom:8px;">Admin Login</div>
+      <div class="login-title">Admin Login</div>
       <input id="email" type="email" class="input" placeholder="Admin email" />
       <input id="password" type="password" class="input" placeholder="Password" />
       <button id="loginBtn" class="btn">Login</button>
@@ -180,18 +207,16 @@
   <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
 
   <script>
-    // Same config as feedback.html
+    // SAME CONFIG AS FEEDBACK WEBSITE
     const firebaseConfig = {
-     apiKey: "AIzaSyA0tHemLD6WOOjuKQ5cGfCe_VPvMQSgVVA",
-     authDomain: "college-feedback-590e1.firebaseapp.com",
-     projectId: "college-feedback-590e1",
-     storageBucket: "college-feedback-590e1.firebasestorage.app",
-     messagingSenderId: "511708349056",
-     appId: "1:511708349056:web:db1518f6609ab623c45c65",
-     measurementId: "G-9QJY1T6G6L"
-   };
-
-    const ADMIN_EMAIL = "biet@gmail.com"; // same as in Firestore rules
+      apiKey: "AIzaSyA0tHemLD6WOOjuKQ5cGfCe_VPvMQSgVVA",
+      authDomain: "college-feedback-590e1.firebaseapp.com",
+      projectId: "college-feedback-590e1",
+      storageBucket: "college-feedback-590e1.firebasestorage.app",
+      messagingSenderId: "511708349056",
+      appId: "1:511708349056:web:db1518f6609ab623c45c65",
+      measurementId: "G-9QJY1T6G6L"
+    };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
@@ -221,9 +246,7 @@
           ? data.createdAt.toDate()
           : null;
 
-        const timeStr = ts
-          ? ts.toLocaleString()
-          : 'No timestamp';
+        const timeStr = ts ? ts.toLocaleString() : 'No timestamp';
 
         const item = document.createElement('div');
         item.className = 'item';
@@ -238,23 +261,25 @@
       });
     }
 
+    // 🔐 Auth state: if logged in -> show dashboard
     auth.onAuthStateChanged(user => {
-      if (user && user.email === ADMIN_EMAIL) {
+      console.log('Auth state changed:', user && user.email);
+      if (user) {
         loginSection.style.display = 'none';
         adminSection.style.display = 'block';
-        adminEmailEl.textContent = user.email;
-        loginError.textContent = '';
+        adminEmailEl.textContent = user.email || '';
 
-        // Listen to feedback in real-time
+        // Listen to Firestore
         unsubscribe && unsubscribe();
         unsubscribe = db.collection('feedback')
           .orderBy('createdAt', 'desc')
           .onSnapshot(renderFeedback, err => {
-            console.error(err);
+            console.error('Firestore error:', err);
+            feedbackList.innerHTML = '<div class="item"><div class="item-message">Error loading feedback.</div></div>';
           });
 
       } else {
-        // Not logged in / not admin
+        // Not logged in
         adminSection.style.display = 'none';
         loginSection.style.display = 'block';
         adminEmailEl.textContent = '';
@@ -268,12 +293,17 @@
       const password = document.getElementById('password').value;
 
       loginError.textContent = '';
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Logging in...';
 
       try {
         await auth.signInWithEmailAndPassword(email, password);
       } catch (err) {
         console.error(err);
         loginError.textContent = 'Login failed. Check email or password.';
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
       }
     });
 

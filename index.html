@@ -104,8 +104,10 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
       margin-top: 6px;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     .pill {
@@ -127,8 +129,18 @@
       cursor: pointer;
     }
 
+    .stats {
+      font-size: 12px;
+      color: #4b5563;
+      margin-bottom: 10px;
+    }
+
+    .stats span {
+      margin-right: 12px;
+    }
+
     .list {
-      margin-top: 10px;
+      margin-top: 4px;
       border-radius: 12px;
       border: 1px solid #e5e7eb;
       background: #ffffff;
@@ -139,6 +151,9 @@
     .item {
       padding: 10px 12px;
       border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
 
     .item:last-child {
@@ -148,17 +163,59 @@
     .item-message {
       font-size: 14px;
       color: #111827;
-      margin-bottom: 4px;
       white-space: pre-wrap;
+    }
+
+    .item-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .item-meta {
       font-size: 11px;
       color: #6b7280;
       display: flex;
-      justify-content: space-between;
       gap: 8px;
       flex-wrap: wrap;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid;
+    }
+
+    .status-new {
+      border-color: rgba(239,68,68,0.3);
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    .status-resolved {
+      border-color: rgba(34,197,94,0.3);
+      background: #ecfdf3;
+      color: #166534;
+    }
+
+    .status-toggle-btn {
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
+      padding: 4px 10px;
+      font-size: 11px;
+      cursor: pointer;
+      color: #374151;
+      white-space: nowrap;
+    }
+
+    .status-toggle-btn:hover {
+      background: #e5e7eb;
     }
 
     @media (max-width: 600px) {
@@ -167,7 +224,6 @@
       .top-bar {
         flex-direction: column;
         align-items: flex-start;
-        gap: 8px;
       }
     }
   </style>
@@ -175,7 +231,7 @@
 <body>
   <div class="app">
     <h1>Feedback Admin</h1>
-    <div class="subtitle">View anonymous feedback submitted by students.</div>
+    <div class="subtitle">View and manage anonymous feedback submitted by students.</div>
 
     <!-- Not logged in -->
     <div id="loginSection" class="login-box">
@@ -193,6 +249,12 @@
           Signed in as <span id="adminEmail"></span>
         </div>
         <button id="logoutBtn" class="logout-btn">Logout</button>
+      </div>
+
+      <div id="statsBar" class="stats">
+        <span>Total: 0</span>
+        <span>New: 0</span>
+        <span>Resolved: 0</span>
       </div>
 
       <div class="list" id="feedbackList">
@@ -229,19 +291,30 @@
     const loginError = document.getElementById('loginError');
     const adminEmailEl = document.getElementById('adminEmail');
     const feedbackList = document.getElementById('feedbackList');
+    const statsBar = document.getElementById('statsBar');
 
     let unsubscribe = null;
 
     function renderFeedback(snapshot) {
       feedbackList.innerHTML = '';
+
+      let total = 0;
+      let newCount = 0;
+      let resolvedCount = 0;
+
       if (snapshot.empty) {
         feedbackList.innerHTML = '<div class="item"><div class="item-message">No feedback yet.</div></div>';
+        statsBar.innerHTML = '<span>Total: 0</span><span>New: 0</span><span>Resolved: 0</span>';
         return;
       }
 
       snapshot.forEach(doc => {
+        total++;
         const data = doc.data();
         const msg = data.message || '';
+        const status = data.status || 'new';
+        if (status === 'resolved') resolvedCount++; else newCount++;
+
         const ts = data.createdAt && data.createdAt.toDate
           ? data.createdAt.toDate()
           : null;
@@ -252,16 +325,55 @@
         item.className = 'item';
         item.innerHTML = `
           <div class="item-message">${msg.replace(/</g, '&lt;')}</div>
-          <div class="item-meta">
-            <span>ID: ${doc.id}</span>
-            <span>${timeStr}</span>
+          <div class="item-meta-row">
+            <div class="item-meta">
+              <span>ID: ${doc.id}</span>
+              <span>${timeStr}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span class="status-badge status-${status}">${status === 'resolved' ? 'Resolved' : 'New'}</span>
+              <button
+                class="status-toggle-btn"
+                data-id="${doc.id}"
+                data-status="${status}"
+              >
+                ${status === 'resolved' ? 'Mark as new' : 'Mark as resolved'}
+              </button>
+            </div>
           </div>
         `;
         feedbackList.appendChild(item);
       });
+
+      statsBar.innerHTML = `
+        <span>Total: ${total}</span>
+        <span>New: ${newCount}</span>
+        <span>Resolved: ${resolvedCount}</span>
+      `;
+
+      // Attach click handlers for status buttons
+      feedbackList.querySelectorAll('.status-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-id');
+          const current = btn.getAttribute('data-status');
+          const next = current === 'resolved' ? 'new' : 'resolved';
+          btn.disabled = true;
+          btn.textContent = 'Updating...';
+          try {
+            await db.collection('feedback').doc(id).update({
+              status: next
+            });
+          } catch (err) {
+            console.error('Error updating status:', err);
+            alert('Failed to update status. Check console.');
+          } finally {
+            // Firestore snapshot will re-render; no need to manually reset text
+          }
+        });
+      });
     }
 
-    // 🔐 Auth state: if logged in -> show dashboard
+    // Auth state: if logged in -> show dashboard
     auth.onAuthStateChanged(user => {
       console.log('Auth state changed:', user && user.email);
       if (user) {
@@ -269,21 +381,21 @@
         adminSection.style.display = 'block';
         adminEmailEl.textContent = user.email || '';
 
-        // Listen to Firestore
         unsubscribe && unsubscribe();
         unsubscribe = db.collection('feedback')
           .orderBy('createdAt', 'desc')
           .onSnapshot(renderFeedback, err => {
             console.error('Firestore error:', err);
             feedbackList.innerHTML = '<div class="item"><div class="item-message">Error loading feedback.</div></div>';
+            statsBar.innerHTML = '<span>Total: 0</span><span>New: 0</span><span>Resolved: 0</span>';
           });
 
       } else {
-        // Not logged in
         adminSection.style.display = 'none';
         loginSection.style.display = 'block';
         adminEmailEl.textContent = '';
         feedbackList.innerHTML = '';
+        statsBar.innerHTML = '<span>Total: 0</span><span>New: 0</span><span>Resolved: 0</span>';
         unsubscribe && unsubscribe();
       }
     });
